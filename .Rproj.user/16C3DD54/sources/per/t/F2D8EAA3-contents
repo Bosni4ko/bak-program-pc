@@ -1,0 +1,43 @@
+
+# Load required libraries
+library(readxl)
+library(dplyr)
+library(lubridate)
+library(openxlsx)
+
+
+# Load datasets
+data <- read_excel("C:\\Users\\User\\Desktop\\bak program\\data_tobii_with_ms.xlsx", sheet = "Sheet 1")
+#data_shimmer <- read_excel("C:/Users/sb03236/OneDrive - University of Surrey/Desktop/Join timestamps/data_shimmer.xlsx", sheet = "data_shimmer")
+data_shimmer <- read.csv("C:\\Users\\User\\Desktop\\bak program\\KE_3_Session1_Shimmer_F562_Calibrated_PC.csv")
+data_shimmer$time_shimmer<-data_shimmer$Shimmer_F562_TimestampSync_FormattedUnix_CAL
+
+
+posix_datetime <- as.POSIXct(data_shimmer$Shimmer_F562_TimestampSync_FormattedUnix_CAL, format = "%Y-%m-%d %H:%M:%OS3")
+
+str(data$datetime_with_ms)
+print(data$datetime_with_ms)
+
+# Convert datetime strings to POSIXct with millisecond precision
+data$datetime_with_ms <- as.POSIXct(data$datetime_with_ms, format = "%m/%d/%Y %H:%M:%OS", tz="UTC")
+
+# Print the converted datetime
+print(data$datetime_with_ms)
+
+
+
+# Left join the datasets based on the closest datetime_with_ms value
+joined_data <- data %>%
+  mutate(closest_datetime_shimmer = sapply(datetime_with_ms, function(x) posix_datetime[which.min(abs(posix_datetime - x))])) %>%
+  mutate(closest_datetime_shimmer = as.POSIXct(closest_datetime_shimmer, tz = "UTC")) %>%
+  left_join(data_shimmer, by = c("closest_datetime_shimmer" = "time"))
+
+
+# Remove the intermediate column
+joined_data <- select(joined_data, -closest_datetime_shimmer)
+
+# View the joined dataset
+print(joined_data)
+
+# Write the data frame to Excel
+write.xlsx(joined_data, "joined_data.xlsx", rowNames = FALSE)

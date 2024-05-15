@@ -1,0 +1,39 @@
+# Load required libraries
+library(readxl)
+library(dplyr)
+library(openxlsx)
+
+
+#############################
+#
+#Tobii data
+#
+#############################
+
+# Read the Tobii data
+#data <- read_excel("data_tobii.xlsx", sheet = "data_tobii")
+data <- read_excel("C:\\Users\\User\\Desktop\\bak program\\Krizes_emocijas Recording46.xlsx", sheet = "Sheet1")
+
+#subset
+data<-subset(data,data$Sensor=="Eye Tracker")
+
+# Combine Recording date and Recording start time to create datetime column
+data$start_datetime <- as.POSIXct(paste(data$`Recording date`, data$`Recording start time`), format = "%m/%d/%Y %H:%M:%OS", tz = "UTC")
+
+# Calculate end time for each row in microseconds
+data$datetime_with_ms <- data$start_datetime + data$`Recording timestamp` / 1000000
+
+# Format the end time to show in microseconds with 3 digits after the last comma
+data$datetime_with_ms <- format(data$datetime_with_ms, format = "%m/%d/%Y %H:%M:%OS3", tz = "UTC")
+
+# Write the data frame to Excel
+write.xlsx(data, "data_tobii_with_ms.xlsx", rowNames = FALSE)
+
+
+
+
+
+
+
+
+
