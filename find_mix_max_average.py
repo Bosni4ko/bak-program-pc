@@ -10,7 +10,7 @@ file_template = '\\joined_data_'
 file_extension = '.xlsx'
 start_file = 117
 end_file = 117
-files_per_participant = 6
+files_per_participant = 1
 
 video_stimulus_names = ['Zolitudes_Lieta (1)','VideoMaximaRac','VideoMaximaEmo', 'Rusina_Lieta_02/ ISS','Rusina_Lieta_03 _ ISS + STUKANS','VideoJekabpilsRac', 'VideoJekabpilsEmo', 'NEO_Lieta','VideoKiberRac','VideoKiberEmo']
 
@@ -46,7 +46,11 @@ def process_file(filepath):
         'Min_Skin_Resistance': df['Shimmer_F562_GSR_Skin_Resistance_CAL'].min(),
         'Max_Skin_Resistance': df['Shimmer_F562_GSR_Skin_Resistance_CAL'].max(),
         'Mean_Skin_Resistance': df['Shimmer_F562_GSR_Skin_Resistance_CAL'].mean(),
-        'Median_Skin_Resistance': df['Shimmer_F562_GSR_Skin_Resistance_CAL'].median()
+        'Median_Skin_Resistance': df['Shimmer_F562_GSR_Skin_Resistance_CAL'].median(),
+        'Min_Skin_PPG' : df[df['Shimmer_F562_PPG_A13_CAL'] != 0]['Shimmer_F562_PPG_A13_CAL'].min(),
+        'Max_Skin_PPG': df['Shimmer_F562_PPG_A13_CAL'].max(),
+        'Mean_Skin_PPG': df[df['Shimmer_F562_PPG_A13_CAL'] != 0]['Shimmer_F562_PPG_A13_CAL'].mean(),
+        'Median_Skin_PPG': df[df['Shimmer_F562_PPG_A13_CAL'] != 0]['Shimmer_F562_PPG_A13_CAL'].median(),
     }
     return summary
 
@@ -54,7 +58,8 @@ def process_file(filepath):
 file_id = start_file
 summaries = pd.DataFrame(columns=['Participant name','Video stimulus name',
                                 'Min_Skin_Conductance','Max_Skin_Conductance','Mean_Skin_Conductance','Median_Skin_Conductance',
-                                'Min_Skin_Resistance','Max_Skin_Resistance','Mean_Skin_Resistance','Median_Skin_Resistance',])
+                                'Min_Skin_Resistance','Max_Skin_Resistance','Mean_Skin_Resistance','Median_Skin_Resistance',
+                                'Min_Skin_PPG','Max_Skin_PPG','Mean_Skin_PPG','Median_Skin_PPG',])
 for participant_id in range(participant_id_start, participant_id_end + 1):
     for i in range(files_per_participant):
         filepath = base_path + str(participant_id) + file_template + str(file_id) + file_extension
