@@ -16,10 +16,10 @@ window_size = 60  # Adjust window size as needed
 filtered_df['smoothed_value'] = filtered_df['Shimmer_F562_GSR_Skin_Resistance_CAL'].rolling(window=window_size).mean()
 
 # Find peaks (spikes)
-peaks, _ = find_peaks(filtered_df['smoothed_value'], distance=window_size, prominence=1)
+peaks, _ = find_peaks(filtered_df['smoothed_value'], distance=window_size, prominence=5)
 
 # Find troughs (drops) by inverting the signal
-troughs, _ = find_peaks(-filtered_df['smoothed_value'], distance=window_size, prominence=1)
+troughs, _ = find_peaks(-filtered_df['smoothed_value'], distance=window_size, prominence=5)
 
 # Combine peaks and troughs
 all_spikes = np.concatenate((peaks, troughs))
