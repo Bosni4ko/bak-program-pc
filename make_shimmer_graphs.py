@@ -5,7 +5,7 @@ import os
 shimmer_base_path = 'Shimmer ieraksti\\KE_'
 shimmer_base_path_2 = '\\KE_'
 participant_id_start = 3
-participant_id_end = 3
+participant_id_end = 16
 shimmer_file_template = '_Session1_Shimmer_F562_Calibrated_PC'
 shimmer_file_extension = '.csv'
 
