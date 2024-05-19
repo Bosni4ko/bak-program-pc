@@ -85,7 +85,7 @@ def find_data(timeline_data,participant_id_start,participant_id_end,files_per_pa
                     conductance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Conductance_CAL'], errors='coerce')
                     time_from_start = (timestamps - timestamps.iloc[0]).dt.total_seconds()
                 
-                    timeline_name = filtered_df['Timeline name'].iloc[0]
+                    timeline_name = filtered_df['Presented Stimulus name'].iloc[0]
                     if timeline_name in timeline_data:
                         timeline_data[timeline_name].append((timestamps, conductance, time_from_start, participant_id))
             else:
@@ -95,7 +95,7 @@ def find_data(timeline_data,participant_id_start,participant_id_end,files_per_pa
     return timeline_data
 
 # Main data processing loop
-timeline_data = {name: [] for name in video_name}
+timeline_data = {name: [] for name in video_stimulus_names}
 
 timeline_data = find_data(timeline_data,participant_id_start = 3, participant_id_end=3,files_per_participant=6,start_file=46)
 timeline_data = find_data(timeline_data,participant_id_start = 4, participant_id_end=4,files_per_participant=6,start_file=105)
