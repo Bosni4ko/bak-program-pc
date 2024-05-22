@@ -21,11 +21,13 @@ end_file <- 110
 
 for (i in start_file:end_file) {
   # Read the Tobii data
-  #data <- read_excel("data_tobii.xlsx", sheet = "data_tobii")
+  #make file name
   file_name <- paste0(base_path, file_pattern, i, file_extension)
+  # Skip this iteration of the loop if file doesnt't exist
   if (!file.exists(file_name)) {
-    next  # Skip this iteration of the loop
+    next  
   }
+  #data <- read_excel("data_tobii.xlsx",sheet = "Sheet1")
   data <- read_excel(file_name, sheet = "Sheet1")
   
   #subset

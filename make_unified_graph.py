@@ -21,24 +21,28 @@ end_file = 130
 files_per_participant = 6
 file_id = start_file
 
-# Stimulus names
-video_stimulus_names = ['Zolitudes_Lieta (1)','VideoMaximaRac','VideoMaximaEmo', 'Rusina_Lieta_02/ ISS','Rusina_Lieta_03 _ ISS + STUKANS','VideoJekabpilsRac', 'VideoJekabpilsEmo', 'NEO_Lieta','VideoKiberRac','VideoKiberEmo']
+# Stimulus and video names
+video_stimulus_names = ['Zolitudes_Lieta (1)','VideoMaximaRac','VideoMaximaEmo', 'Rusina_Lieta_03 _ ISS + STUKANS','VideoJekabpilsRac', 'VideoJekabpilsEmo', 'NEO_Lieta','VideoKiberRac','VideoKiberEmo']
 video_name = ['VID - video','VID - atbilde', 'Maxima video', 'Maxima - atbilde', 'Policija - video', 'Policija - atbilde']
 
 # Function to plot combined data
 def plot_combined_data(write_path, data_list, window_size):
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(40, 10))
+    #Create 2 graphs for skin conductance and phasic skin conductance
+    (ax1, ax2) = plt.subplots(2, 1, figsize=(40, 10))
+    #Create color palete
     num_participants = len(data_list)
     colors = plt.cm.get_cmap('hsv', num_participants)
+
     for idx, data in enumerate(data_list):
         timestamps, conductance, time_from_start, participant_id = data
         
+        #Find average values for conductance and find phasic conductance
         mean_conductance = conductance.rolling(window=window_size, center=True).mean()
         median_gsr = mean_conductance.rolling(window=int(8 * 120), center=True, min_periods=1).median()
         adjusted_conductance = mean_conductance - median_gsr
 
+        #Create a graph for each participant data
         ax1.plot(time_from_start, mean_conductance, label=f'KE_ {participant_id}', linewidth=1, color=colors(idx))
-
         ax2.plot(time_from_start, adjusted_conductance, label=f'KE_ {participant_id}', linewidth=1, color=colors(idx))
     
     # Customize plots
@@ -55,6 +59,7 @@ def plot_combined_data(write_path, data_list, window_size):
     ax2.grid(True)
     ax2.legend()
     
+    #Change x axis timestamp formatt, so it show time from the start of the video
     max_time = max([data[2].max() for data in data_list])
     x_ticks = [tick for tick in range(0, int(max_time) + 1, 5)]
     x_labels = [f'{int(tick // 60)}:{int(tick % 60):02d}' for tick in x_ticks]
@@ -84,10 +89,12 @@ def find_data(timeline_data,participant_id_start,participant_id_end,files_per_pa
                     timestamps = pd.to_datetime(filtered_df['Shimmer_F562_TimestampSync_FormattedUnix_CAL'], format='%Y/%m/%d %H:%M:%S.%f')
                     conductance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Conductance_CAL'], errors='coerce')
                     time_from_start = (timestamps - timestamps.iloc[0]).dt.total_seconds()
-                
+                    resistance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Resistance_CAL'], errors='coerce')
+                    ppg = pd.to_numeric(filtered_df['Shimmer_F562_PPG_A13_CAL'], errors='coerce')
+
                     timeline_name = filtered_df['Presented Stimulus name'].iloc[0]
                     if timeline_name in timeline_data:
-                        timeline_data[timeline_name].append((timestamps, conductance, time_from_start, participant_id))
+                        timeline_data[timeline_name].append((timestamps, conductance, time_from_start, participant_id, resistance, ppg))
             else:
                 i = i - 1
             i += 1
@@ -103,9 +110,76 @@ timeline_data = find_data(timeline_data,participant_id_start = 5, participant_id
 timeline_data = find_data(timeline_data,participant_id_start = 12, participant_id_end=12,files_per_participant=5,start_file=100)
 timeline_data = find_data(timeline_data,participant_id_start = 13, participant_id_end=16,files_per_participant=6,start_file=111)
 #timeline_data = find_data(timeline_data,participant_id_start = 13, participant_id_end=13,files_per_participant=6,start_file=111)
+
+def write_timeline_data_to_excel(excel_path, data_list):
+    combined_df = pd.DataFrame()
+    for data in data_list:
+        timestamps, conductance, time_from_start, participant_id = data
+        #find median gsr with the window of 8(4 seconds before and 4 after) * 120(120 HZ sample rate)
+        median_gsr = conductance.rolling(window=int(8 * 120), center=True, min_periods=1).median()
+        #find phasic conductance 
+        adjusted_conductance = conductance - median_gsr
+
+        #save data to data frame
+        df = pd.DataFrame({
+            'ParticipantID': participant_id,
+            'Timestamp': timestamps,
+            'Phasic Conductance': adjusted_conductance,
+            'TimeFromStart': time_from_start,
+        })
+        combined_df = pd.concat([combined_df, df], ignore_index=True)
+    
+    #save data to excel
+    combined_df.to_excel(excel_path, index=False, sheet_name='Timeline Data')
+
+def write_summary_statistics(excel_path, timeline_data):
+    summary_stats = []
+    for timeline_name, data_list in timeline_data.items():
+        all_conductance = pd.Series(dtype='float64')
+        all_resistance = pd.Series(dtype='float64')
+        all_ppg = pd.Series(dtype='float64')
+        
+
+        for data in data_list:
+            _, conductance, _, _, resistance, ppg = data
+            all_conductance = pd.concat([all_conductance, conductance])
+            all_resistance = pd.concat([all_resistance, resistance])
+            all_ppg = pd.concat([all_ppg, ppg])
+
+            median_gsr = all_conductance.rolling(window=int(8 * 120), center=True, min_periods=1).median()
+            all_adjusted_conductance = all_conductance - median_gsr
+        
+        if not all_conductance.empty:
+           summary_stats.append({
+                'Timeline Name': timeline_name,
+                'Mean Conductance': all_adjusted_conductance.mean(),
+                'Max Conductance': all_adjusted_conductance.max(),
+                'Min Conductance': all_adjusted_conductance.min(),
+                'Median Conductance': all_adjusted_conductance.median(),
+                # 'Mean Resistance': all_resistance.mean(),
+                # 'Max Resistance': all_resistance.max(),
+                # 'Min Resistance': all_resistance.min(),
+                # 'Median Resistance': all_resistance.median(),
+                # 'Mean PPG': all_ppg[all_ppg != 0].mean(),  # Ignore 0 values
+                # 'Max PPG': all_ppg[all_ppg != 0].max(),
+                # 'Min PPG': all_ppg[all_ppg != 0].min(),
+                # 'Median PPG': all_ppg[all_ppg != 0].median()
+            })
+    
+    summary_df = pd.DataFrame(summary_stats)
+    summary_df.to_excel(excel_path, index=False, sheet_name='Summary Statistics')
+
 # Save combined plots for each "Timeline name"
 for timeline_name, data_list in timeline_data.items():
+    print('oof')
     if data_list:  # Only plot if there is data
-        write_path = 'Joined data\\' + timeline_name + graph_extension
-        plot_combined_data(write_path, data_list, window_size=30)
+        #write_path = 'Joined data\\' + timeline_name + graph_extension
+        #plot_combined_data(write_path, data_list, window_size=30)
+        print('good')
+        excel_path = os.path.join('Joined data', f'{timeline_name}.xlsx')
+        write_timeline_data_to_excel(excel_path, data_list)
+
+# Save summary statistics
+summary_excel_path = os.path.join('Joined data', 'Summary_Statistics.xlsx')
+write_summary_statistics(summary_excel_path, timeline_data)
 
