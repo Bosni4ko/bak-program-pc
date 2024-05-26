@@ -5,7 +5,7 @@ import os
 from scipy.signal import find_peaks
 import numpy as np
 
-
+#File paths
 joined_data_base_path = 'Joined data\\KE_'
 joined_data_extension = '.xlsx'
 joined_data_file_template = '\\joined_data_'
@@ -16,6 +16,8 @@ graph_extension = '.png'
 excel_write_path = 'Joined data'
 
 summary_excel_file = 'summary_statistics_each_participant.xlsx'
+
+#Participants and file id's
 participant_id_start = 13
 participant_id_end = 16
 start_file = 111
@@ -25,25 +27,27 @@ files_per_participant = 6
 file_id = start_file
 
 video_stimulus_names = ['Zolitudes_Lieta (1)','VideoMaximaRac','VideoMaximaEmo', 'Rusina_Lieta_02/ ISS','Rusina_Lieta_03 _ ISS + STUKANS','VideoJekabpilsRac', 'VideoJekabpilsEmo', 'NEO_Lieta','VideoKiberRac','VideoKiberEmo']
-
+# Plotting the data
 def plot_joined_data(write_path,df, timestamps, conductance,window_size,type):
-    # Plotting the data
-
+    #Calculating average conductance
     mean_conductance = conductance.rolling(window=window_size, center=True).mean()
+    #Transofrming timestamps to time from video start
     time_from_start = (timestamps - timestamps.iloc[0]).dt.total_seconds()
+    #Calculating phasic gsr
     median_gsr = mean_conductance.rolling(window=int(window_size_seconds * sample_rate), center=True, min_periods=1).median()
     adjusted_conductance = mean_conductance - median_gsr
-
+    
+    #Calculating phasic gsr for excel file(without applaying average values for better visualisation)
     window_size_seconds = 8  # 4 seconds before and 4 seconds after
     sample_rate = 120   #sample rate 120 HZ
     median_gsr_excel = conductance.rolling(window=int(window_size_seconds * sample_rate), center=True, min_periods=1).median()
     adjusted_conductance_excel = conductance - median_gsr_excel
 
-    # Find peaks and drops in adjusted_conductance
+    # Find peaks and drops in phasic conductance
     peaks, _ = find_peaks(adjusted_conductance, distance=window_size*10,height=0.001,prominence=0.001)  # Adjust distance as needed
     drops, _ = find_peaks(-adjusted_conductance, distance=window_size*10,height=0.001,prominence=0.001)  # Inverted for drops
     
-    # Calculate statistics
+    # Calculate mean, median, max and min values
     stats = {
         'Mean': adjusted_conductance_excel.mean(),
         'Max': adjusted_conductance_excel.max(),
@@ -61,8 +65,6 @@ def plot_joined_data(write_path,df, timestamps, conductance,window_size,type):
     ax1.grid(True)
     ax1.scatter(time_from_start.iloc[peaks], mean_conductance.iloc[peaks], color='yellow', label='Peaks',s=100)
     ax1.scatter(time_from_start.iloc[drops], mean_conductance.iloc[drops], color='orange', label='Drops',s=100)
-    # ax2.scatter(time_from_start.iloc[peaks], adjusted_conductance.iloc[peaks], color='green', label='Peaks')
-    # ax2.scatter(time_from_start.iloc[drops], adjusted_conductance.iloc[drops], color='orange', label='Drops')
     ax1.legend()
     # Second subplot for Phasic Skin Conductance
     ax2.plot(time_from_start, adjusted_conductance, label='Phasic Skin Conductance', color='red',linewidth = 1)
@@ -72,18 +74,6 @@ def plot_joined_data(write_path,df, timestamps, conductance,window_size,type):
     ax2.axhline(y=0, color='black', linewidth=2)  # Bold horizontal line at y = 0
     ax2.grid(True)
     ax2.legend()
-
-    
-    # plt.plot(time_from_start,mean_Conductance, label='Skin Conductance', color='blue', linewidth=1)
-    # plt.plot(time_from_start,adjusted_conductance, label='Phasic Skin Conductance', color='red', linewidth=1)
-    # plt.title('Skin Conductance Over Time')
-    # plt.xlabel('Time Since Start (minutes)')
-    # plt.ylabel('Conductance (kΩ)')
-    # plt.grid(True)
-    # plt.legend()
-    #plt.scatter(spikes['Shimmer_F562_TimestampSync_FormattedUnix_CAL'], spikes, color='Orange', label='Spikes and Drops')
-    # Adding 5-second markers to the x-axis
-    
 
     # Adding 5-second markers to the x-axis for both subplots
     max_time = time_from_start.max()
@@ -103,35 +93,33 @@ def plot_joined_data(write_path,df, timestamps, conductance,window_size,type):
 
     return stats
 
+#make summary file path read data from excel or create empty data frame
 summary_file_path = os.path.join(excel_write_path, summary_excel_file)
 if os.path.exists(summary_file_path):
     summary_stats_df = pd.read_excel(summary_file_path, sheet_name='Summary')
 else:
     summary_stats_df = pd.DataFrame(columns=['Participant ID', 'Video', 'Stimulus', 'Mean', 'Max', 'Min', 'Median'])
 
-# cumulative_dfs = {}
+#PRocess each participants file
 for participant_id in range(participant_id_start, participant_id_end + 1):
     i = 0
     while i < files_per_participant:
         filepath = joined_data_base_path + str(participant_id) + joined_data_file_template + str(file_id) + joined_data_extension
-        time. sleep(1)
         if os.path.exists(filepath): 
+            #Get data from excel file
             df = pd.read_excel(filepath)
             filtered_df = df[df['Presented Stimulus name'].isin(video_stimulus_names)]
-            #stimulus_name = filtered_df['Presented Stimulus name'].iloc[0]
             timestamps = pd.to_datetime(df['Shimmer_F562_TimestampSync_FormattedUnix_CAL'], format='%Y/%m/%d %H:%M:%S.%f')
             conductance = pd.to_numeric(df['Shimmer_F562_GSR_Skin_Conductance_CAL'], errors='coerce')
             filtered_timestamps = pd.to_datetime(filtered_df['Shimmer_F562_TimestampSync_FormattedUnix_CAL'], format='%Y/%m/%d %H:%M:%S.%f')
             filtered_conductance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Conductance_CAL'], errors='coerce')
             video = df['Timeline name'].iloc[0]
-            
-            # # Create a unique sheet name
-            # sheet_name = f'{video}'
-            # cumulative_dfs[sheet_name] = pd.DataFrame()  # Initialize empty DataFrame for each sheet
-
+            #Make output excel path
             write_path = joined_data_base_path + str(participant_id) + write_folder + write_file_template + str(participant_id) + '_' + str(file_id) + '_' + video +graph_extension
             filtered_write_path = joined_data_base_path + str(participant_id) + write_folder + write_file_template + str(participant_id) + '_' + str(file_id) + '_' + video  + '(stimulus_only)' +graph_extension 
+            #Plot the data
             plot_joined_data(write_path, df, timestamps,conductance,window_size=30, type = 'all')
+            #Append statistic values to excel file
             if not filtered_df.empty:
                 stats_stimulus  = plot_joined_data(filtered_write_path,filtered_df,filtered_timestamps,filtered_conductance,window_size=30,type = 'stymulus_only')
 
@@ -152,7 +140,6 @@ for participant_id in range(participant_id_start, participant_id_end + 1):
         file_id = file_id + 1
 
 # Save summary statistics to Excel file
-# Save summary statistics to Excel file
 with pd.ExcelWriter(summary_file_path, engine='openpyxl') as writer:
     try:
         # Try to write to the 'Summary' sheet if it already exists
@@ -160,36 +147,3 @@ with pd.ExcelWriter(summary_file_path, engine='openpyxl') as writer:
     except ValueError:
         # If the 'Summary' sheet already exists, add data to it
         summary_stats_df.to_excel(writer, index=False, sheet_name='Summary')
-# # Save the cumulative peaks and drops data to a single Excel file
-# cumulative_excel_write_path = excel_write_path + '\\cumulative_peaks_and_drops.xlsx'
-# with pd.ExcelWriter(cumulative_excel_write_path) as writer:
-#     for sheet_name, df in cumulative_dfs.items():
-#         df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-  # if(type == 'stymulus_only'):
-    #     # Save peaks and drops to cumulative DataFrame
-    #     peaks_data = {
-    #         'Participant ID': ('KE_' + str(participant_id)),
-    #         'Video': [video] * len(peaks),
-    #         'Video stymulus': [stimulus_name] * len(peaks),
-    #         'Time (s)': time_from_start.iloc[peaks],
-    #         'Conductance': mean_conductance.iloc[peaks],
-    #         'Drop/Peak height':adjusted_conductance.iloc[peaks],
-    #         'Type': ['Peak'] * len(peaks)
-    #     }
-    #     drops_data = {
-    #         'Participant ID': ('KE_' + str(participant_id)),
-    #         'Video': [video] * len(drops),
-    #         'Video stymulus': [stimulus_name] * len(drops),
-    #         'Time (s)': time_from_start.iloc[drops],
-    #         'Conductance': mean_conductance.iloc[drops],
-    #         'Drop/Peak height':adjusted_conductance.iloc[drops],
-    #         'Type': ['Drop'] * len(drops)
-    #     }   
-
-    #     peaks_df = pd.DataFrame(peaks_data)
-    #     drops_df = pd.DataFrame(drops_data)
-    #     combined_df = pd.concat([peaks_df, drops_df])
-    
-    #     global cumulative_dfs
-    #     cumulative_dfs[sheet_name] = pd.concat([cumulative_dfs[sheet_name], combined_df])

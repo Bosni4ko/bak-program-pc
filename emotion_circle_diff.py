@@ -1,7 +1,9 @@
 import pandas as pd
 
+#This program calculates the emotin strength changes of each session since the first session
+
 # Load the Excel file
-file_path = 'Aplis_results.xlsx'  # Change this to the path of your Excel file
+file_path = 'Aplis_results.xlsx'  
 df = pd.read_excel(file_path, sheet_name='Sheet1')
 
 # Extract the emotion columns
@@ -52,7 +54,6 @@ for participant in df['participant'].unique():
 output_file_path = 'emotional_strength_changes.xlsx'
 change_df.to_excel(output_file_path, index=False)
 
-print(f"Emotional strength changes have been saved to {output_file_path}")
 
 
 

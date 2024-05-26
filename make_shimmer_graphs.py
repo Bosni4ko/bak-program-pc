@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+#Shimmer file path and participant ids
 shimmer_base_path = 'Shimmer ieraksti\\KE_'
 shimmer_base_path_2 = '\\KE_'
 participant_id_start = 3
@@ -9,6 +10,7 @@ participant_id_end = 16
 shimmer_file_template = '_Session1_Shimmer_F562_Calibrated_PC'
 shimmer_file_extension = '.csv'
 
+#Joined data path and file ids
 joined_data_base_path = 'Joined data\\KE_'
 write_folder = '\\Graphs'
 shimmer_write_file_template = '\\Shimmer_graph_KE'
@@ -28,11 +30,12 @@ def format_func(value, tick_number ):
 def plot_shimmer_data(write_path,df, timestamps, conductance,window_size):
     # Plotting the data
     window_size_seconds = 8  # 4 seconds before and 4 seconds after
-    sample_rate = 120
+    sample_rate = 120 #Sample rate of 120HZ
+    #Calculate average conductance and phasic conductance
     mean_conductance = conductance.rolling(window=window_size, center=True).mean()
     median_gsr = mean_conductance.rolling(window=int(window_size_seconds * sample_rate), center=True, min_periods=1).median()
-     # Subtract median GSR from conductance
     adjusted_conductance = mean_conductance - median_gsr
+    #Plot the data
     plt.figure(figsize=(40, 10))
     plt.plot(time_since_start_seconds, mean_conductance, label='Original Skin Conductance', color='blue', linewidth=1)
     plt.plot(time_since_start_seconds, adjusted_conductance, label='Phasic Skin Conductance', color='red', linewidth=1)
@@ -47,7 +50,9 @@ def plot_shimmer_data(write_path,df, timestamps, conductance,window_size):
     plt.savefig(write_path)  # Saves the plot as a PNG file
     plt.close()  # Close the plot figure to free up memory    
 
+#Process each participant file
 for participant_id in range(participant_id_start, participant_id_end + 1):
+    #Get file path
     filepath = shimmer_base_path + str(participant_id) + shimmer_base_path_2 + str(participant_id) + shimmer_file_template + shimmer_file_extension
     if os.path.exists(filepath):  
         # Open the file and read the first line to find the separator
@@ -67,35 +72,6 @@ for participant_id in range(participant_id_start, participant_id_end + 1):
             continue
         if not os.path.exists(joined_data_base_path + str(participant_id) + write_folder):
             os.mkdir(joined_data_base_path + str(participant_id) + write_folder)
+        #Save graph
         write_path = joined_data_base_path + str(participant_id) + write_folder + shimmer_write_file_template + str(participant_id) + graph_extension
         plot_shimmer_data(write_path,shimmer_df,timestamps,conductance,window_size = 60)
-
-
-# # Load the data from Excel
-# def load_data(file_path):
-#     return pd.read_excel(file_path)
-
-# # Plotting function
-# def plot_data(df, timestamps, conductance):
-#     window_size = 60
-#     df['Mean_conductance'] = conductance.rolling(window=window_size, center=True).mean()
-#     plt.figure(figsize=(50, 10))
-#     plt.plot(df['Mean_conductance'], label='Skin conductance', color='blue',linewidth=1)
-#     plt.title('Skin conductance Over Time')
-#     plt.xlabel('Timestamp')
-#     plt.ylabel('conductance (kΩ)')
-#     plt.grid(True)
-#     plt.legend()
-#     plt.xticks(rotation=45)  # Rotate x-axis labels for better visibility
-#     plt.tight_layout()  # Adjust layout to make room for rotated labels
-#     plt.show()
-
-# # Main function to load and plot the data
-
-# file_path = 'C:\\Users\\User\\Desktop\\bak program\\Joined data\\KE_3\\joined_data_46.xlsx'  # Path to your Excel file
-# df = pd.read_excel(file_path)
-# timestamps = df['Shimmer_F562_TimestampSync_FormattedUnix_CAL']
-# conductance = df['Shimmer_F562_GSR_Skin_conductance_CAL']  # Replace 'Column1' and 'Column2' with your actual column names
-# plot_data(df,timestamps,conductance)
-
-

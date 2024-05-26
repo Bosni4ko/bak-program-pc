@@ -75,23 +75,27 @@ def plot_combined_data(write_path, data_list, window_size):
     plt.savefig(write_path)
     plt.close()
 
-
+#Function to load data
 def find_data(timeline_data,participant_id_start,participant_id_end,files_per_participant,start_file):
+    #Load each participants each file data
     file_id = start_file
     for participant_id in range(participant_id_start, participant_id_end + 1):
         i = 0
         while i < files_per_participant:
             filepath = joined_data_base_path + str(participant_id) + joined_data_file_template + str(file_id) + joined_data_extension
             if os.path.exists(filepath): 
+                #Read excel file
                 df = pd.read_excel(filepath)
                 filtered_df = df[df['Presented Stimulus name'].isin(video_stimulus_names)]
                 if not filtered_df.empty:
+                    #Read timestamps, conductance, resistance and ppg values
                     timestamps = pd.to_datetime(filtered_df['Shimmer_F562_TimestampSync_FormattedUnix_CAL'], format='%Y/%m/%d %H:%M:%S.%f')
                     conductance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Conductance_CAL'], errors='coerce')
+                    #Convert tiemstamps to time since video start
                     time_from_start = (timestamps - timestamps.iloc[0]).dt.total_seconds()
                     resistance = pd.to_numeric(filtered_df['Shimmer_F562_GSR_Skin_Resistance_CAL'], errors='coerce')
                     ppg = pd.to_numeric(filtered_df['Shimmer_F562_PPG_A13_CAL'], errors='coerce')
-
+                    #Append data
                     timeline_name = filtered_df['Presented Stimulus name'].iloc[0]
                     if timeline_name in timeline_data:
                         timeline_data[timeline_name].append((timestamps, conductance, time_from_start, participant_id, resistance, ppg))
@@ -101,7 +105,7 @@ def find_data(timeline_data,participant_id_start,participant_id_end,files_per_pa
             file_id += 1
     return timeline_data
 
-# Main data processing loop
+# Create data array
 timeline_data = {name: [] for name in video_stimulus_names}
 
 timeline_data = find_data(timeline_data,participant_id_start = 3, participant_id_end=3,files_per_participant=6,start_file=46)
@@ -109,8 +113,8 @@ timeline_data = find_data(timeline_data,participant_id_start = 4, participant_id
 timeline_data = find_data(timeline_data,participant_id_start = 5, participant_id_end=11,files_per_participant=6,start_file=58)
 timeline_data = find_data(timeline_data,participant_id_start = 12, participant_id_end=12,files_per_participant=5,start_file=100)
 timeline_data = find_data(timeline_data,participant_id_start = 13, participant_id_end=16,files_per_participant=6,start_file=111)
-#timeline_data = find_data(timeline_data,participant_id_start = 13, participant_id_end=13,files_per_participant=6,start_file=111)
 
+#Function to write data to excel
 def write_timeline_data_to_excel(excel_path, data_list):
     combined_df = pd.DataFrame()
     for data in data_list:
@@ -132,6 +136,7 @@ def write_timeline_data_to_excel(excel_path, data_list):
     #save data to excel
     combined_df.to_excel(excel_path, index=False, sheet_name='Timeline Data')
 
+#Write mean, max, min  and median values to excel
 def write_summary_statistics(excel_path, timeline_data):
     summary_stats = []
     for timeline_name, data_list in timeline_data.items():
@@ -155,15 +160,7 @@ def write_summary_statistics(excel_path, timeline_data):
                 'Mean Conductance': all_adjusted_conductance.mean(),
                 'Max Conductance': all_adjusted_conductance.max(),
                 'Min Conductance': all_adjusted_conductance.min(),
-                'Median Conductance': all_adjusted_conductance.median(),
-                # 'Mean Resistance': all_resistance.mean(),
-                # 'Max Resistance': all_resistance.max(),
-                # 'Min Resistance': all_resistance.min(),
-                # 'Median Resistance': all_resistance.median(),
-                # 'Mean PPG': all_ppg[all_ppg != 0].mean(),  # Ignore 0 values
-                # 'Max PPG': all_ppg[all_ppg != 0].max(),
-                # 'Min PPG': all_ppg[all_ppg != 0].min(),
-                # 'Median PPG': all_ppg[all_ppg != 0].median()
+                'Median Conductance': all_adjusted_conductance.median()
             })
     
     summary_df = pd.DataFrame(summary_stats)
@@ -171,11 +168,9 @@ def write_summary_statistics(excel_path, timeline_data):
 
 # Save combined plots for each "Timeline name"
 for timeline_name, data_list in timeline_data.items():
-    print('oof')
     if data_list:  # Only plot if there is data
-        #write_path = 'Joined data\\' + timeline_name + graph_extension
-        #plot_combined_data(write_path, data_list, window_size=30)
-        print('good')
+        write_path = 'Joined data\\' + timeline_name + graph_extension
+        plot_combined_data(write_path, data_list, window_size=30)
         excel_path = os.path.join('Joined data', f'{timeline_name}.xlsx')
         write_timeline_data_to_excel(excel_path, data_list)
 
